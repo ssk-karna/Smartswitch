@@ -16,7 +16,7 @@ process.env.DEBUG = "dialogflow:debug"; // enables lib debugging statements
 
 var admin = require("firebase-admin");
 
-var serviceAccount = require("./config/udemy-ass1-firebase-adminsdk-78wt0-bbec96a5bb.json");
+var serviceAccount = require(<add path to your serviceAccount>);
 const { convert } = require("actions-on-google/dist/service/actionssdk");
 const { user } = require("firebase-functions/lib/providers/auth");
 const { firebaseConfig } = require("firebase-functions");
