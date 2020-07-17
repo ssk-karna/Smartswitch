@@ -29,6 +29,9 @@ const { firebaseConfig } = require("firebase-functions");
 let userid = "";
 let username = "";
 let thedeviceid = "";
+var mycondition = false;
+var listofdevices = [];
+let devname;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -49,13 +52,16 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     console.log("Dialogflow bulbs:" + agent.parameters["bulbs"]);
     console.log("Dialogflow status:" + agent.parameters["status"]);
     console.log("Dialogflow name:" + agent.parameters["name"]);
+    console.log("Dialogflow devices:" + agent.parameters["number-integer"]);
+    console.log("Dialogflow rooms:" + agent.parameters["rooms"]);
+    console.log("Dialogflow any:" + agent.parameters["any"]);
 
     function welcome(agent) {
       //conv = agent.conv();
 
       console.log("Hello to AVRN");
       //conv.ask("Welcome to AVRN SmartSwitch! Ready to continue ?");
-      agent.add("Welcome to AVRN SmartSwitch! Ready to continue ?");
+      agent.add("Welcome to AVRN! Ready to continue ?");
     }
 
     function fallback(agent) {
@@ -63,12 +69,75 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       agent.add(`I'm sorry, can you try again?`);
     }
 
+    function devices(agent) {
+      var countdevice = agent.parameters["number-integer"];
+      var rooms = agent.parameters["rooms"];
+      var roomdevice = rooms.toString() + "" + countdevice.toString();
+      console.log("The roomdevice is " + roomdevice);
+      let paramany = agent.parameters["any"];
+      console.log("Any param is " + paramany);
+      console.log("Devices are " + listofdevices);
+      var controldevice = "";
+      let condition;
+
+      for (var i = 0; i < listofdevices.length; i++) {
+        //let newcondition;
+        var k = listofdevices[i];
+        var l = i + 1;
+        var thedev = admin
+          .database()
+          .ref()
+          .child("Devices/" + k)
+          .orderByChild("Devices/DeviceName");
+        console.log("thedev value is " + thedev.toString());
+
+        thedev.on("value", function (snapshot) {
+          //snapshot.forEach(function (childSnapshot) {
+          var reqdata = snapshot.val();
+          console.log("Apple is " + reqdata.Name);
+
+          devname = reqdata.DeviceName;
+          console.log("Checking puz " + devname);
+        });
+
+        console.log("Orange is " + devname);
+        console.log("countdevice  " + countdevice);
+
+        if (devname === roomdevice) {
+          console.log("Checking  Condition", devname === roomdevice);
+          controldevice = k;
+          condition = true;
+          console.log("jenkings " + devname);
+        } else {
+        }
+        console.log("Iterating devices " + k + " " + i);
+      }
+
+      console.log(condition + " " + controldevice);
+      if (condition === true) {
+        console.log("Checking Condition Again", condition);
+        thedeviceid = controldevice.toString();
+        console.log("Got my device id as " + thedeviceid);
+        conv.ask(
+          `You are now controlling ${roomdevice}! You can now give controlling command.`
+        );
+      } else {
+        conv.ask(
+          `Please select from the list as device1 or device2 and so on... 
+          You can control ${listofdevices}.`
+        );
+      }
+
+      agent.add(conv);
+    }
+
     function switchbulbs(agent) {
-      //var conv = agent.conv();
+      var conv = agent.conv();
       var responseText = "";
 
       let bulb = agent.parameters["bulbs"];
       let status = agent.parameters["status"];
+      // var mycondition = false;
 
       let iddevice = thedeviceid;
       let on = "1";
@@ -76,7 +145,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       if (bulb !== "" && status !== "") {
         let device = iddevice.toString();
         var switches = bulb;
-        let reqswitch = "Switch" + switches;
+
         var bulbStatus = status.toString();
         console.log("The device var is " + device);
         console.log("The Status var is " + status);
@@ -88,70 +157,58 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
           .child("Devices/" + device + "/Switches");
         console.log(currentStatus.toString());
 
+        // var cond = false;
         currentStatus.once("value", function (snapshot) {
           console.log("snapshot " + snapshot.val());
           if (snapshot.exists() && snapshot.hasChild(switches)) {
             console.log("The result is " + switches + ":" + bulbStatus);
-
             console.log("Snapshot is " + snapshot.val());
+            //var obj = snapshot.hasChild([switches]);
+            console.log("Number of child " + snapshot.hasChild(switches));
             currentStatus
               .update({
                 [switches]: bulbStatus,
               })
               .then(() => {
+                mycondition = true;
                 responseText = "The switch has been updated";
                 console.log(responseText);
+                console.log("My Condition is " + mycondition);
                 console.log("Yes we are in " + currentStatus.toString());
               })
               .catch((e) => console.log(e));
           } else {
           }
         });
+        //mycondition = cond;
       } else {
       }
+
       if (bulbStatus === "1") {
-        conv.close("Switch has been turned On");
+        console.log("cond " + mycondition);
+        conv.ask(
+          "Switch has been turned On. Any things else would you like me to do?"
+        );
       } else if (bulbStatus === "0") {
-        conv.close("Switch has been turned off");
-      } else {
-        conv.close("Please go with appropriate command.");
+        conv.ask(
+          "Switch has been turned off. Any things else would you like me to do?"
+        );
       }
+      // else if (mycondition === false) {
+      //   conv.ask(
+      //     "You don't have this switch. Please go with switches you own."
+      //   );
+      //}
+      else {
+        //console.log("cond " + mycondition);
+        conv.ask(
+          "Sorry I can't do this. Either you don't have this switch or you have requested inappropriate command"
+        );
+      }
+
       console.log("resText" + responseText);
       agent.add(conv);
     }
-
-    var Ref = admin
-      .database()
-      .ref()
-      .child("Users")
-      .orderByChild("UserInfo/Email");
-
-    Ref.on("value", function (snapshot) {
-      snapshot.forEach(function (childSnapshot) {
-        var mydata = childSnapshot.val();
-
-        var mymail = userid;
-        var mydevice = "";
-        console.log(mydata.UserInfo.Email + " mY message ");
-        console.log("The login Id is " + mymail);
-
-        if (mydata.UserInfo.Email === mymail) {
-          mydevice = mydata.Devices.DeviceId;
-          let thedevicesr = {};
-          thedevicesr.add(mydevice);
-          console.log("The req device is" + mydevice);
-          thedeviceid = mydevice;
-          //conv.ask(`Hi ${user.given_name}! You are a user. You can now control the switches of
-          //${thedeviceid}`);
-          console.log("HAHAHA you find my device " + thedeviceid);
-        } else {
-          console.log("You are not a registered user.");
-          //conv.close(
-          //"You are not a registered user! You cannot control the switches."
-          //);
-        }
-      });
-    });
 
     function askforsignin(agent) {
       conv.ask(new SignIn());
@@ -168,12 +225,48 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
       console.log("user");
       console.log(user);
+      var Ref = admin
+        .database()
+        .ref()
+        .child("Users")
+        .orderByChild("UserInfo/Email");
+
+      Ref.on("value", function (snapshot) {
+        snapshot.forEach(function (childSnapshot) {
+          var mydata = childSnapshot.val();
+          var mymail = userid;
+          console.log(mydata.UserInfo.Email + " mY message " + mydata);
+          console.log("The login Id is " + mymail);
+
+          if (mydata.UserInfo.Email === mymail) {
+            listofdevices = [];
+            var mydevice = mydata.Devices;
+            var obj = mydata.Devices;
+
+            Object.keys(obj).forEach((key) => {
+              var snap = obj[key];
+              if (!listofdevices.includes(snap.DeviceId)) {
+                listofdevices.push(snap.DeviceId);
+              }
+
+              console.log("Real snap " + snap);
+              console.log("snap is " + listofdevices);
+            });
+
+            console.log("The req device is" + mydevice);
+            //console.log("HAHAHA you find my device " + devid);
+          } else {
+            console.log("You are not a registered user.");
+          }
+        });
+      });
 
       if (email === null) {
         conv.close("It is fine. We respect your privacy");
       } else {
+        console.log("In getsignin method" + listofdevices);
         conv.ask(
-          ` Hi ${user.given_name}! Thank you for sharing data. What can I do for you ?`
+          ` Hi ${user.given_name}! You control your devices. Which room would you like to control or Would you like me to show the list of devices you control?`
         );
       }
       agent.add(conv);
@@ -197,6 +290,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set("switchbulb", switchbulbs);
     intentMap.set("ask-signin", askforsignin);
     intentMap.set("get-signin", getsignin);
+    intentMap.set("Devices", devices);
     agent.handleRequest(intentMap);
   }
 );
