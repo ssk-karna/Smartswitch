@@ -16,7 +16,7 @@ process.env.DEBUG = "dialogflow:debug"; // enables lib debugging statements
 
 var admin = require("firebase-admin");
 
-var serviceAccount = require(<add path to your serviceAccount>);
+var serviceAccount = require("Add file path");
 const { convert } = require("actions-on-google/dist/service/actionssdk");
 const { user } = require("firebase-functions/lib/providers/auth");
 const { firebaseConfig } = require("firebase-functions");
@@ -137,7 +137,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
       let bulb = agent.parameters["bulbs"];
       let status = agent.parameters["status"];
-      // var mycondition = false;
+      let mycondition;
 
       let iddevice = thedeviceid;
       let on = "1";
@@ -157,14 +157,14 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
           .child("Devices/" + device + "/Switches");
         console.log(currentStatus.toString());
 
-        // var cond = false;
         currentStatus.once("value", function (snapshot) {
           console.log("snapshot " + snapshot.val());
           if (snapshot.exists() && snapshot.hasChild(switches)) {
             console.log("The result is " + switches + ":" + bulbStatus);
             console.log("Snapshot is " + snapshot.val());
-            //var obj = snapshot.hasChild([switches]);
+
             console.log("Number of child " + snapshot.hasChild(switches));
+            mycondition = true;
             currentStatus
               .update({
                 [switches]: bulbStatus,
@@ -180,16 +180,15 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
           } else {
           }
         });
-        //mycondition = cond;
       } else {
       }
 
-      if (bulbStatus === "1") {
+      if (bulbStatus === "1" && mycondition === true) {
         console.log("cond " + mycondition);
         conv.ask(
           "Switch has been turned On. Any things else would you like me to do?"
         );
-      } else if (bulbStatus === "0") {
+      } else if (bulbStatus === "0" && mycondition === true) {
         conv.ask(
           "Switch has been turned off. Any things else would you like me to do?"
         );
@@ -266,7 +265,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       } else {
         console.log("In getsignin method" + listofdevices);
         conv.ask(
-          ` Hi ${user.given_name}! You control your devices. Which room would you like to control or Would you like me to show the list of devices you control?`
+          ` Hi ${user.given_name}! You're ready control your devices. You can now start controlling. Would you like me to show the list of devices you control?`
         );
       }
       agent.add(conv);
