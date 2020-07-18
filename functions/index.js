@@ -8,15 +8,12 @@ const functions = require("firebase-functions");
 const { WebhookClient } = require("dialogflow-fulfillment");
 const { Card, Suggestion } = require("dialogflow-fulfillment");
 const { dialogflow, SignIn } = require("actions-on-google");
-// const { SignIn } = require("actions-on-google");
-
-//const app = dialogflow({ debug: true });
 
 process.env.DEBUG = "dialogflow:debug"; // enables lib debugging statements
 
 var admin = require("firebase-admin");
 
-var serviceAccount = require("Add file path");
+var serviceAccount = require("./config/udemy-ass1-firebase-adminsdk-78wt0-bbec96a5bb.json");
 const { convert } = require("actions-on-google/dist/service/actionssdk");
 const { user } = require("firebase-functions/lib/providers/auth");
 const { firebaseConfig } = require("firebase-functions");
@@ -32,6 +29,9 @@ let thedeviceid = "";
 var mycondition = false;
 var listofdevices = [];
 let devname;
+var roomlist = [];
+let devlistname;
+let roomlistname = [];
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -57,10 +57,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     console.log("Dialogflow any:" + agent.parameters["any"]);
 
     function welcome(agent) {
-      //conv = agent.conv();
-
       console.log("Hello to AVRN");
-      //conv.ask("Welcome to AVRN SmartSwitch! Ready to continue ?");
       agent.add("Welcome to AVRN! Ready to continue ?");
     }
 
@@ -71,43 +68,40 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
     function devices(agent) {
       var countdevice = agent.parameters["number-integer"];
-      var rooms = agent.parameters["rooms"];
-      var roomdevice = rooms.toString() + "" + countdevice.toString();
-      console.log("The roomdevice is " + roomdevice);
+      var rooms = agent.parameters["rooms"]; //getting roomname
+      var roomdevice = rooms.toString() + "" + countdevice.toString(); //deviceName that user says
       let paramany = agent.parameters["any"];
-      console.log("Any param is " + paramany);
       console.log("Devices are " + listofdevices);
-      var controldevice = "";
+      var controldevice = ""; //device that user is currently controlling
       let condition;
 
       for (var i = 0; i < listofdevices.length; i++) {
-        //let newcondition;
-        var k = listofdevices[i];
+        var k = listofdevices[i]; //getting devices from list individually
         var l = i + 1;
         var thedev = admin
           .database()
           .ref()
           .child("Devices/" + k)
           .orderByChild("Devices/DeviceName");
-        console.log("thedev value is " + thedev.toString());
 
         thedev.on("value", function (snapshot) {
           //snapshot.forEach(function (childSnapshot) {
           var reqdata = snapshot.val();
-          console.log("Apple is " + reqdata.Name);
-
+          roomlist = [];
           devname = reqdata.DeviceName;
-          console.log("Checking puz " + devname);
+
+          if (!roomlist.includes(devname)) {
+            roomlist.push(devname);
+          }
         });
 
-        console.log("Orange is " + devname);
+        console.log("Checking roomlist" + roomlist);
+        console.log("Checking devname again is " + devname);
         console.log("countdevice  " + countdevice);
 
         if (devname === roomdevice) {
-          console.log("Checking  Condition", devname === roomdevice);
           controldevice = k;
-          condition = true;
-          console.log("jenkings " + devname);
+          condition = true; //adding condition as final mark that execution is succesfull
         } else {
         }
         console.log("Iterating devices " + k + " " + i);
@@ -115,16 +109,15 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
 
       console.log(condition + " " + controldevice);
       if (condition === true) {
-        console.log("Checking Condition Again", condition);
         thedeviceid = controldevice.toString();
-        console.log("Got my device id as " + thedeviceid);
+
         conv.ask(
           `You are now controlling ${roomdevice}! You can now give controlling command.`
         );
       } else {
         conv.ask(
-          `Please select from the list as device1 or device2 and so on... 
-          You can control ${listofdevices}.`
+          `Please select device name from the list. 
+          You can control ${roomlist}.`
         );
       }
 
@@ -135,14 +128,15 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       var conv = agent.conv();
       var responseText = "";
 
-      let bulb = agent.parameters["bulbs"];
-      let status = agent.parameters["status"];
+      let bulb = agent.parameters["bulbs"]; //getting the switch number
+      let status = agent.parameters["status"]; // action as on or off
       let mycondition;
 
       let iddevice = thedeviceid;
       let on = "1";
       let off = "0";
       if (bulb !== "" && status !== "") {
+        //if sentence is complete then only function will execute
         let device = iddevice.toString();
         var switches = bulb;
 
@@ -154,15 +148,12 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
         var currentStatus = admin
           .database()
           .ref()
-          .child("Devices/" + device + "/Switches");
+          .child("Devices/" + device + "/Switches"); //path of requested switch
         console.log(currentStatus.toString());
 
         currentStatus.once("value", function (snapshot) {
           console.log("snapshot " + snapshot.val());
           if (snapshot.exists() && snapshot.hasChild(switches)) {
-            console.log("The result is " + switches + ":" + bulbStatus);
-            console.log("Snapshot is " + snapshot.val());
-
             console.log("Number of child " + snapshot.hasChild(switches));
             mycondition = true;
             currentStatus
@@ -173,8 +164,6 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
                 mycondition = true;
                 responseText = "The switch has been updated";
                 console.log(responseText);
-                console.log("My Condition is " + mycondition);
-                console.log("Yes we are in " + currentStatus.toString());
               })
               .catch((e) => console.log(e));
           } else {
@@ -184,7 +173,6 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       }
 
       if (bulbStatus === "1" && mycondition === true) {
-        console.log("cond " + mycondition);
         conv.ask(
           "Switch has been turned On. Any things else would you like me to do?"
         );
@@ -192,14 +180,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
         conv.ask(
           "Switch has been turned off. Any things else would you like me to do?"
         );
-      }
-      // else if (mycondition === false) {
-      //   conv.ask(
-      //     "You don't have this switch. Please go with switches you own."
-      //   );
-      //}
-      else {
-        //console.log("cond " + mycondition);
+      } else {
         conv.ask(
           "Sorry I can't do this. Either you don't have this switch or you have requested inappropriate command"
         );
@@ -208,7 +189,31 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       console.log("resText" + responseText);
       agent.add(conv);
     }
+    function show(agent) {
+      for (var i = 0; i < listofdevices.length; i++) {
+        var k = listofdevices[i];
 
+        var thedevlist = admin
+          .database()
+          .ref()
+          .child("Devices/" + k)
+          .orderByChild("Devices/DeviceName");
+        console.log("thedev value is " + thedevlist.toString());
+        thedevlist.on("value", function (snapshot) {
+          //snapshot.forEach(function (childSnapshot) {
+          var datareq = snapshot.val();
+
+          devlistname = datareq.DeviceName;
+          console.log("Checking devname " + devlistname);
+          if (!roomlistname.includes(devlistname)) {
+            roomlistname.push(devlistname); // saving list of devices in an array to show
+          }
+        });
+      }
+      console.log("Room name list " + roomlistname);
+      conv.ask("Following are the list of devices you own: " + roomlistname);
+      agent.add(conv);
+    }
     function askforsignin(agent) {
       conv.ask(new SignIn());
       agent.add(conv);
@@ -217,7 +222,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     function getsignin(agent) {
       const jwt = require("jsonwebtoken");
       const user = jwt.decode(conv.request.user.idToken);
-      let email = user.email;
+      let email = user.email; // getting user email
       userid = email;
       let name_user = user.given_name;
       username = name_user.toString();
@@ -234,26 +239,25 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
         snapshot.forEach(function (childSnapshot) {
           var mydata = childSnapshot.val();
           var mymail = userid;
-          console.log(mydata.UserInfo.Email + " mY message " + mydata);
           console.log("The login Id is " + mymail);
 
           if (mydata.UserInfo.Email === mymail) {
+            //comparing if user email exists in database
             listofdevices = [];
+            roomlistname = [];
             var mydevice = mydata.Devices;
             var obj = mydata.Devices;
 
             Object.keys(obj).forEach((key) => {
               var snap = obj[key];
               if (!listofdevices.includes(snap.DeviceId)) {
-                listofdevices.push(snap.DeviceId);
+                listofdevices.push(snap.DeviceId); // saving list of devices that user owns
               }
 
               console.log("Real snap " + snap);
-              console.log("snap is " + listofdevices);
             });
 
             console.log("The req device is" + mydevice);
-            //console.log("HAHAHA you find my device " + devid);
           } else {
             console.log("You are not a registered user.");
           }
@@ -265,7 +269,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       } else {
         console.log("In getsignin method" + listofdevices);
         conv.ask(
-          ` Hi ${user.given_name}! You're ready control your devices. You can now start controlling. Would you like me to show the list of devices you control?`
+          ` Hi ${user.given_name}! You're ready control to your devices. You can now start controlling. Would you like me to show the list of devices you control?`
         );
       }
       agent.add(conv);
@@ -290,6 +294,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set("ask-signin", askforsignin);
     intentMap.set("get-signin", getsignin);
     intentMap.set("Devices", devices);
+    intentMap.set("Show", show);
     agent.handleRequest(intentMap);
   }
 );
