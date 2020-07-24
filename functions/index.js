@@ -269,107 +269,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
       }
       agent.add(conv);
     }
-    // function control(agent) {
-    //   var countdevice = agent.parameters["number-integer"];
-    //   var rooms = agent.parameters["rooms"]; //getting roomname
-    //   var roomdevice = rooms.toString() + "" + countdevice.toString(); //deviceName that user says
-    //   let paramany = agent.parameters["any"];
-    //   console.log("Devices are " + listofdevices);
-    //   var controldevice = ""; //device that user is currently controlling
-    //   let condition;
-    //   let bulb = agent.parameters["bulbs"]; //getting the switch number
-    //   let status = agent.parameters["status"]; // action as on or off
-    //   let mycondition;
 
-    //   for (var i = 0; i < listofdevices.length; i++) {
-    //     var k = listofdevices[i]; //getting devices from list individually
-    //     var l = i + 1;
-    //     var thedev = admin
-    //       .database()
-    //       .ref()
-    //       .child("Devices/" + k)
-    //       .orderByChild("Devices/DeviceName");
-
-    //     thedev.on("value", function (snapshot) {
-    //       //snapshot.forEach(function (childSnapshot) {
-    //       var reqdata = snapshot.val();
-    //       controlroomlist = [];
-    //       devname = reqdata.DeviceName;
-
-    //       if (!controlroomlist.includes(devname)) {
-    //         controlroomlist.push(devname);
-    //       }
-    //     });
-
-    //     console.log("Checking roomlist" + roomlist);
-    //     console.log("Checking devname again is " + devname);
-    //     console.log("countdevice  " + countdevice);
-
-    //     if (devname === roomdevice) {
-    //       controldevice = k;
-    //       //condition = true; //adding condition as final mark that execution is succesfull
-    //     } else {
-    //     }
-    //     console.log("Iterating devices " + k + " " + i);
-    //   }
-
-    //   let iddevice = thedeviceid;
-    //   let on = "1";
-    //   let off = "0";
-    //   if (bulb !== "" && status !== "") {
-    //     //if sentence is complete then only function will execute
-    //     let device = iddevice.toString();
-    //     var switches = bulb;
-
-    //     var bulbStatus = status.toString();
-    //     console.log("The device var is " + device);
-    //     console.log("The Status var is " + status);
-    //     console.log("The bulb var is " + switches);
-
-    //     var currentStatus = admin
-    //       .database()
-    //       .ref()
-    //       .child("Devices/" + device + "/Switches"); //path of requested switch
-    //     console.log(currentStatus.toString());
-
-    //     currentStatus.once("value", function (snapshot) {
-    //       console.log("snapshot " + snapshot.val());
-    //       if (snapshot.exists() && snapshot.hasChild(switches)) {
-    //         console.log("Number of child " + snapshot.hasChild(switches));
-    //         mycondition = true;
-    //         currentStatus
-    //           .update({
-    //             [switches]: bulbStatus,
-    //           })
-    //           .then(() => {
-    //             mycondition = true;
-    //             responseText = "The switch has been updated";
-    //             console.log(responseText);
-    //           })
-    //           .catch((e) => console.log(e));
-    //       } else {
-    //       }
-    //     });
-    //   } else {
-    //   }
-
-    //   if (bulbStatus === "1" && mycondition === true) {
-    //     conv.ask(
-    //       "Switch has been turned On. Any things else would you like me to do?"
-    //     );
-    //   } else if (bulbStatus === "0" && mycondition === true) {
-    //     conv.ask(
-    //       "Switch has been turned off. Any things else would you like me to do?"
-    //     );
-    //   } else {
-    //     conv.ask(
-    //       "Sorry I can't do this. Either you don't have this switch or you have requested inappropriate command"
-    //     );
-    //   }
-
-    //   console.log("resText" + responseText);
-    //   agent.add(conv);
-    // }
     // // Uncomment and edit to make your own Google Assistant intent handler
     // // uncomment `intentMap.set('your intent name here', googleAssistantHandler);`
     // // below to get this function to be run when a Dialogflow intent is matched
@@ -390,7 +290,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest(
     intentMap.set("get-signin", getsignin);
     intentMap.set("Devices", devices);
     intentMap.set("Show", show);
-    intentMap.set("control", control);
+
     agent.handleRequest(intentMap);
   }
 );
